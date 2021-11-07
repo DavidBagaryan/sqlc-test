@@ -32,15 +32,3 @@ func (q *Queries) GetCountJsonbTableByStatus(ctx context.Context, dollar_1 strin
 	err := row.Scan(&count)
 	return count, err
 }
-
-const getCountRelationTableByStatus = `-- name: GetCountRelationTableByStatus :one
-SELECT count(*)
-FROM relation_status
-`
-
-func (q *Queries) GetCountRelationTableByStatus(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getCountRelationTableByStatus)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}

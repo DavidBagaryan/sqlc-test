@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
-	_ "github.com/lib/pq"
 	"log"
 	"sqlc-test/repository"
 	"time"
+
+	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -19,44 +21,68 @@ func main() {
 	)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("an err on db conn", err)
 	}
 
-	queries := repository.New(db)
-	//err = queries.PrepareTables(ctx)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//
-	//status := []string{"new", "pending", "in-progress", "ready", "done"}
-	//bStatus, _ := json.Marshal(status)
-	//
-	//for i := 0; i < 100_000; i++ {
-	//	err = queries.CreateIntTableRow(ctx, 0b1111)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//
-	//	err = queries.CreateJsonbTableRow(ctx, bStatus)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//}
-
-	//tryJson(ctx, queries)
-	tryInt(ctx, queries)
+	m := Manage{repository.New(db)}
+	//m.PrepareData(ctx)
+	//m.TryJson(ctx)
+	m.TryInt(ctx)
 }
 
-func tryInt(ctx context.Context, queries *repository.Queries) {
-	now := time.Now()
-	res, _ := queries.GetCountIntTableByStatus(ctx, int32(0b_1111))
-	exec := time.Since(now)
-	fmt.Println(res, "int exec time: ", exec)
+type Manage struct {
+	*repository.Queries
 }
 
-func tryJson(ctx context.Context, queries *repository.Queries) {
+func (m *Manage) PrepareData(ctx context.Context) {
+	err := m.PrepareTables(ctx)
+	if err != nil {
+		log.Fatal("an err on preparing table", err)
+	}
+
+	statusHistoryJSON := []string{"new", "pending", "in-progress", "ready", "done"}
+	bStatusHistoryJSON, _ := json.Marshal(statusHistoryJSON)
+
+	for i := 0; i < 100_000; i++ {
+		err = m.CreateIntTableRow(ctx, 0b1111)
+		if err != nil {
+			log.Fatal("an err on populating int table", err)
+		}
+
+		err = m.CreateJsonbTableRow(ctx, bStatusHistoryJSON)
+		if err != nil {
+			log.Fatal("an err on populating json table", err)
+		}
+	}
+}
+
+func (m *Manage) TryInt(ctx context.Context) {
+	err := m.checkExecutionTime(ctx, "int", func(ctx context.Context) error {
+		_, err := m.GetCountIntTableByStatus(ctx, int32(0b_1111))
+		return err
+	})
+
+	if err != nil {
+		log.Fatal("an err on populating int table", err)
+	}
+}
+
+func (m *Manage) TryJson(ctx context.Context) {
+	err := m.checkExecutionTime(ctx, "json", func(ctx context.Context) error {
+		_, err := m.GetCountJsonbTableByStatus(ctx, "done")
+		return err
+	})
+
+	if err != nil {
+		log.Fatal("an err on populating json table", err)
+	}
+}
+
+func (m *Manage) checkExecutionTime(ctx context.Context, benchName string, fn func(ctx context.Context) error) error {
 	now := time.Now()
-	res, _ := queries.GetCountJsonbTableByStatus(ctx, "done")
+	err := fn(ctx)
 	exec := time.Since(now)
-	fmt.Println(res, "json exec time: ", exec)
+	fmt.Println(fmt.Sprintf("%s exec time: %s", benchName, exec))
+
+	return err
 }

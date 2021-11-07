@@ -7,9 +7,3 @@ WHERE status & $1 != 0;
 SELECT count(*)
 FROM jsonb_status
 WHERE status ? $1::text;
-
--- name: GetCountRelationTableByStatus :one
-SELECT count(*)
-FROM relation_status;
-
-

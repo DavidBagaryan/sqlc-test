@@ -17,13 +17,3 @@ type JsonbStatus struct {
 	ID     uuid.UUID
 	Status json.RawMessage
 }
-
-type RelationStatus struct {
-	ID     uuid.UUID
-	Status int32
-}
-
-type StatusDictionary struct {
-	ID   int32
-	Name string
-}
